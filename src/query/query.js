@@ -1,4 +1,4 @@
-import { forEach, isArray, isString } from 'lodash';
+import { forEach, isArray, isString, isPlainObject } from 'lodash';
 import { fromGlobalId, toGlobalId } from 'graphql-relay';
 import getFieldList from './projection';
 import viewer from '../model/viewer';
@@ -16,12 +16,21 @@ function processId({ id, _id = id }) {
 }
 
 function getCount(Collection, selector) {
-  if (selector && (isArray(selector.id) || isArray(selector._id))) {
-    const { id, _id = id } = selector;
-    delete selector.id;
-    selector._id = {
-      $in: _id.map((id) => processId({ id }))
-    };
+  if (selector) {
+    const { id, _id } = selector;
+    const input = [_id, id].find(isArray);
+
+    if (input) {
+      const $in = input.map((id) => processId({ id }));
+
+      if (isPlainObject(selector._id)) {
+        selector._id.$in = $in;
+      } else {
+        selector._id = { $in };
+      }
+
+      delete selector.id;
+    }
   }
 
   return Collection.count(selector);
@@ -102,12 +111,21 @@ function deleteOne(Collection, args) {
 }
 
 function getList(Collection, selector, options = {}, context, info = null) {
-  if (selector && (isArray(selector.id) || isArray(selector._id))) {
-    const { id, _id = id } = selector;
-    delete selector.id;
-    selector._id = {
-      $in: _id.map((id) => processId({ id }))
-    };
+  if (selector) {
+    const { id, _id } = selector;
+    const input = [_id, id].find(isArray);
+
+    if (input) {
+      const $in = input.map((id) => processId({ id }));
+
+      if (isPlainObject(selector._id)) {
+        selector._id.$in = $in;
+      } else {
+        selector._id = { $in };
+      }
+
+      delete selector.id;
+    }
   }
 
   const projection = getFieldList(info);
